@@ -1,3 +1,6 @@
+import tensorflow as tf
+import tensorflow_hub as hub
+import numpy as np
 import pandas as pd
 from numpy import random
 
@@ -57,8 +60,41 @@ df_test = df_gas[:test]
 df_train = df_non_gas.append(df_gas[test:], ignore_index=True)
 df_train = shuffle(df_train)
 
+print('Performing Text Embedding...')
+
+tf.logging.set_verbosity(tf.logging.INFO)
+tf.set_random_seed(42)
+
+with tf.Graph().as_default():
+    sentences = tf.placeholder(tf.string, name='sentences')
+    module = hub.Module("https://tfhub.dev/google/universal-sentence-encoder/2", trainable=False)
+    embeddings = module(sentences)
+
+    def embed_datasets(sets):
+        sess = tf.train.MonitoredSession()
+        return (embed_dataset(ds, sess) for ds in sets)
+
+    def embed_dataset(ds: pd.DataFrame, sess):
+        step = 128
+        embeds = np.zeros((0, 512))
+        print('invoking embedding with chunks <=', step, 'for', ds.shape[0], 'sentences')
+        for start in range(0, ds.shape[0], step):
+            end = start + step
+            chunk = ds[start:end]['text'].values
+            chunk = sess.run(embeddings, {sentences: chunk})
+            embeds = np.append(embeds, chunk, 0)
+            print(embeds.shape)
+        return {'embeddings': embeds}
+
+    print('preparing datasets')
+    train, test = embed_datasets((df_train, df_test))
+
+print('Saving Model...')
+
+df_test['embedding'] = tuple(test['embeddings'].tolist())
+df_train['embedding'] = tuple(train['embeddings'].tolist())
+
 df_test.to_csv('data/test.csv')
 df_train.to_csv('data/train.csv')
-
 
 print('Finished.')

@@ -2,47 +2,26 @@ import itertools
 
 import tensorflow as tf
 from tensorflow.python.ops.losses import losses
-import tensorflow_hub as hub
 import numpy as np
+import ast
 import pandas as pd
 
-test = pd.read_csv('data/test.csv')[['text', 'time']]
-train = pd.read_csv('data/train.csv')[['text', 'time']]
+test = pd.read_csv('data/test.csv', converters={"embedding": ast.literal_eval})[['embedding', 'time']]
+train = pd.read_csv('data/train.csv', converters={"embedding": ast.literal_eval})[['embedding', 'time']]
+
+prepare_ds_fn = lambda df: ({'embeddings': np.array(df['embedding'].tolist())}, df['time'].values)
+
+test = prepare_ds_fn(test)
+train = prepare_ds_fn(train)
 
 tf.logging.set_verbosity(tf.logging.INFO)
 tf.set_random_seed(42)
 
-with tf.Graph().as_default():
-    sentences = tf.placeholder(tf.string, name='sentences')
-    time = tf.placeholder(tf.float32, name='time')
-    module = hub.Module("https://tfhub.dev/google/universal-sentence-encoder/2", trainable=False)
-    embeddings = module(sentences)
 
-    def embed_datasets(sets):
-        print('initing session')
-        sess = tf.train.MonitoredSession()
-        return (embed_dataset(ds, sess) for ds in sets)
-
-    def embed_dataset(ds: pd.DataFrame, sess):
-        step = 128
-        embeds = np.zeros((0, 512))
-        print('invoking embedding with chunks <=', step, 'for', ds.shape[0], 'sentences')
-        for start in range(0, ds.shape[0], step):
-            end = start + step
-            chunk = ds[start:end]['text'].values
-            chunk = sess.run(embeddings, {sentences: chunk})
-            embeds = np.append(embeds, chunk, 0)
-            print(embeds.shape)
-        return {'embeddings': embeds}, ds['time'].values
-
-    print('preparing datasets')
-    train, test = embed_datasets((train, test))
-
-
-learning_rates = (5e-3, 1e-2, 5e-2)
-regularisations = (3e-1, 1., 3., 1e+1)
-dropouts = (.15, )
-hiddens = ((64, 18), )
+learning_rates = (5e-3,)
+regularisations = (3e-3,)
+dropouts = (.25, )
+hiddens = ((6, 5), )
 
 combinations_number = len(learning_rates) * len(regularisations) * len(dropouts) * len(hiddens)
 print('Going verify', combinations_number, 'combinations')
@@ -83,47 +62,15 @@ for arch in hiddens:
                 model_number += 1
                 print('Checked {}/{}={:1f}% models'.format(model_number, combinations_number, model_number * 100 / combinations_number))
 
+                if False:
+                    print('model evaluation')
+                    results = estimator.predict(input_fn=lambda: (train[0], None), yield_single_examples=False)
+                    predictions = list(itertools.islice(results, 1))
+                    pd.DataFrame(predictions[0]['predictions']).to_csv('data/predictions-train-m{}.csv'.format(model_number))
+                    results = estimator.predict(input_fn=lambda: (test[0], None), yield_single_examples=False)
+                    predictions = list(itertools.islice(results, 1))
+                    pd.DataFrame(predictions[0]['predictions']).to_csv('data/predictions-test-m{}.csv'.format(model_number))
+                print('finished')
+
 print('The best model is', best_arch)
 
-if False:
-    print('model showcase')
-    # train[0]['embeddings'] = train[0]['embeddings'][:5]
-    results = estimator.predict(input_fn=lambda: (train[0], None), yield_single_examples=False)
-    # print(train[0]['embeddings'].shape[1])
-    predictions = list(itertools.islice(results, 1))
-    print(predictions)
-print('finished')
-
-# saver = tf.train.Saver()
-#
-# print(sess.run(estimate, {sentences: texts}))
-
-# def make_embed_fn(module_name):
-#     with tf.Graph().as_default():
-#         sentences = tf.placeholder(tf.string)
-#         embed = hub.Module(module_name)
-#         embeddings = embed(sentences)
-#         session = tf.train.MonitoredSession()
-#     return lambda x: session.run(embeddings, {sentences: x})
-
-#
-# f2 = make_embed_fn("https://tfhub.dev/google/universal-sentence-encoder/2")
-# f2_dup = make_embed_fn("https://tfhub.dev/google/universal-sentence-encoder/2")
-#
-# x = [
-#     "The quick brown fox jumps over the lazy dog.",
-#     "I am a sentence for which I would like to get its embedding",
-# ]
-#
-# print('Done two functions')
-# print(f2)
-# print(f2_dup)
-#
-# # Returns zeros showing the module is stable across instantiations.
-# print(np.linalg.norm(f2(x) - f2_dup(x)))
-#
-# # ISSUE: returns 0.3 showing the embeddings per example depend on other elements in the batch.
-# print(np.linalg.norm(f2(x[0:1]) - f2(x)[0:1]))
-#
-# print("let's do it")
-#
