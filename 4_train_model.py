@@ -19,9 +19,9 @@ tf.set_random_seed(42)
 
 
 learning_rates = (5e-3,)
-regularisations = (3e-3,)
+regularisations = (1e-2, 3e-2, 1e-1)
 dropouts = (.25, )
-hiddens = ((6, 5), )
+hiddens = ((6, 6), )
 
 combinations_number = len(learning_rates) * len(regularisations) * len(dropouts) * len(hiddens)
 print('Going verify', combinations_number, 'combinations')
@@ -41,12 +41,23 @@ for arch in hiddens:
                                                       loss_reduction=losses.Reduction.MEAN)
                 min_model_loss = 100500
                 loss_dynamic = []
-                for step in range(6):
-                    # print('training model')
-                    estimator.train(input_fn=lambda: train, steps=500)
-                    # print('testing model')
-                    results = estimator.evaluate(input_fn=lambda: test, steps=1)
+                for step in range(3):
+                    # print('DODODoDO')
+                    # train_spec = tf.estimator.TrainSpec(input_fn=lambda: train, max_steps=1200000)
+                    # eval_spec = tf.estimator.EvalSpec(input_fn=lambda: test, steps=100, start_delay_secs=1,
+                    #                                   throttle_secs=1, name='eval-spec')
+                    # results = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
                     # print(results)
+                    # print(estimator.get_variable_names())
+                    # print(estimator.get_variable_value('loss'))
+                    # print('DONNENENEN')
+                    #
+                    # estimator.train(input_fn=lambda: train, steps=2000)
+                    # print(estimator.get_variable_names())
+                    # print('training model')
+
+                    estimator.train(input_fn=lambda: train, steps=500)
+                    results = estimator.evaluate(input_fn=lambda: test, steps=1)
                     loss = results['average_loss']
                     loss_dynamic.append(loss)
                     if loss < min_model_loss:
