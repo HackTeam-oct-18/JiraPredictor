@@ -7,32 +7,33 @@ from tensorflow.keras import metrics
 import commons
 
 print('Reading data set')
-features, labels = commons.read_trainig_ds('data/all.csv')
+features, labels = commons.read_training_ds('data/all.csv')
 
 tf.logging.set_verbosity(tf.logging.INFO)
 tf.set_random_seed(42)
 
-print('Building model')
 
-reg = 3e-1
-dropout = 0.25
+def try_model(arch, lr, reg, dropout, name_prefix, activation='relu', name=None):
+    model = keras.Sequential()
 
-model = keras.Sequential()
-model.add(layers.Dropout(dropout))
-model.add(layers.Dense(36, activation='relu', kernel_regularizer=regularizers.l2(reg)))
-model.add(layers.Dropout(dropout))
-model.add(layers.Dense(6, activation='relu', kernel_regularizer=regularizers.l2(reg)))
-model.add(layers.Dropout(dropout))
-model.add(layers.Dense(1, activation='relu', kernel_regularizer=regularizers.l2(reg)))
+    for units in arch:
+        model.add(layers.Dropout(dropout))
+        model.add(layers.Dense(units, activation=activation, kernel_regularizer=regularizers.l2(reg)))
 
-# Configure a model for mean-squared error regression.
-model.compile(optimizer=tf.train.AdamOptimizer(0.01),
-              loss='mse',       # mean squared error
-              metrics=[metrics.mae, metrics.mape])
+    model.build((None, 512))
+    model.compile(optimizer=tf.train.AdagradOptimizer(lr),
+                  loss='mse',       # mean squared error
+                  metrics=[metrics.mape, metrics.mae])
 
-print('Training')
+    if name is None:
+        name = '{} arch={} lr={} reg={} dropout={} {}'.format(name_prefix, arch, lr, reg, dropout, activation)
+    print('Going to train model', name)
 
-model.fit(features, labels, epochs=200, batch_size=32, validation_split=0.3,
-          callbacks=[keras.callbacks.TensorBoard(log_dir='./logs/1')])
+    model.fit(features, labels, epochs=250, batch_size=32, validation_split=0.2,
+              callbacks=[keras.callbacks.TensorBoard(log_dir='./logs/' + name)])
 
-print('Finished')
+
+print('Running training models')
+try_model((6, 6, 1), 1e-2, 3e-3, 0.35, 'basic model')
+try_model((6, 6, 1), 1e-2, 3e-3, 0.35, 'basic model', 'elu')
+try_model((6, 6, 1), 1e-2, 3e-3, 0.35, 'basic model', 'sigmoid')

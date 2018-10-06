@@ -16,7 +16,7 @@ def mkdirs(dir):
     os.makedirs(dir, exist_ok=True)
 
 
-def read_trainig_ds(path):
+def read_training_ds(path):
     data = pd.read_csv(path, converters = {"embedding": ast.literal_eval})[['embedding', 'time']]
     labels = data['time'].values
     data = data['embedding'].values
