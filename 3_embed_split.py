@@ -21,8 +21,7 @@ def join_dataset(paths):
 
 
 df_all = join_dataset(('data/original-chunk-0.csv', 'data/original-chunk-1.csv',
-                       'data/original-chunk-2.csv', 'data/original-chunk-3.csv',
-                       'data/original-chunk-4.csv'))
+                       'data/original-chunk-2.csv'))
 
 print('Performing Text Embedding...')
 
@@ -65,6 +64,7 @@ df_all['embedding'] = tuple(embed_output['embeddings'].tolist())
 df_all = df_all.drop_duplicates('embedding')
 print('Gained data-set of', df_all.shape[0], 'elements')
 
+#####
 
 print('Splitting data set to test and train chunks')
 
@@ -87,5 +87,6 @@ df_train = commons.shuffle(df_train)
 
 df_test.to_csv('data/test.csv')
 df_train.to_csv('data/train.csv')
+df_all.to_csv('data/all.csv')
 
 print('Finished')

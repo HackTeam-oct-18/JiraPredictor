@@ -1,10 +1,12 @@
 import pandas as pd
 
 import commons
+import numpy as np
+
 
 # This script performs
 # 1 joining all data from Jira to single dataset
-# 2 adding lower case copy of Jira's text
+# 2 adding lower case copy of Jira's text  (REMOVED)
 # 3 splitting data-set to chunks for translation
 
 
@@ -72,15 +74,15 @@ print('Gained data set of', df_all.shape[0], 'elements')
 
 ######
 
-print('Adding lower-case text copy of data')
-df_lower_case = df_all.copy(True)
-df_lower_case['text'] = df_lower_case['text'].apply(lambda text: text.lower())
-df_lower_case['lower'] = True
-df_all['lower'] = False
-
-df_all = df_all.append(df_lower_case)
-df_all = df_all.drop_duplicates('text')
-print('Gained data set of', df_all.shape[0], 'elements')
+# print('Adding lower-case text copy of data')
+# df_lower_case = df_all.copy(True)
+# df_lower_case['text'] = df_lower_case['text'].apply(lambda text: text.lower())
+# df_lower_case['lower'] = True
+# df_all['lower'] = False
+#
+# df_all = df_all.append(df_lower_case)
+# df_all = df_all.drop_duplicates('text')
+# print('Gained data set of', df_all.shape[0], 'elements')
 
 ######
 
@@ -111,3 +113,26 @@ print('saving final', chunk_number, 'chunk with overall text length', chunk_text
 chunk.to_csv('data/original-chunk-{}.csv'.format(chunk_number))
 
 print('Finished')
+
+#######
+
+print('Splitting data set to test and train chunks')
+
+test = int(df_all.shape[0] * 0.2 + 0.5)
+df_test = df_all[:test]
+df_train = df_all[test:]
+
+# df_test.to_csv('data/test.csv')
+# df_train.to_csv('data/train.csv')
+
+print('Finished')
+
+
+def mae(y_true, y_pred):
+    return np.mean(abs(y_true - y_pred))
+
+
+baseline_guess = np.median(df_train['time'])
+
+print('The baseline guess is a score of %0.2f' % baseline_guess)
+print("Baseline Performance on the test set: MAE = %0.4f" % mae(df_test['time'], baseline_guess))
