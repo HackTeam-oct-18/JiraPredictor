@@ -1,3 +1,5 @@
+from os import environ
+
 import pandas as pd
 import tensorflow as tf
 import tensorflow_hub as hub
@@ -9,7 +11,11 @@ import commons
 # This script performs
 # 1 joining all data-set chunks after translating
 # 2 performs model embedding on given data
-# 3 splitting into test and train data-sets
+
+
+if environ.get('TFHUB_CACHE_DIR') is None:
+    print("WARINGN: you haven't provide TFHUB_CACHE_DIR system variable, model will be downloaded to temp folder.")
+
 
 
 def join_dataset(paths):
@@ -61,32 +67,12 @@ with tf.Graph().as_default():
     embed_output = embed_dataset(df_all, tf.train.MonitoredSession())
 
 df_all['embedding'] = tuple(embed_output['embeddings'].tolist())
+size = df_all.shape[0]
 df_all = df_all.drop_duplicates('embedding')
-print('Gained data-set of', df_all.shape[0], 'elements')
+print('Gained data set of {} embedding elements, {} ones were filtred as duplicates'.format(df_all.shape[0], size - df_all.shape[0]))
 
-#####
+#######
 
-print('Splitting data set to test and train chunks')
-
-df_gas = df_all.loc[df_all['gas'] == True]
-df_non_gas = df_all.loc[df_all['gas'] == False]
-
-count_ng = df_non_gas.shape[0]
-count_g = df_gas.shape[0]
-sum = count_g + count_ng
-test = int(sum * 0.2 + 0.5)
-train_g = count_g - test
-train_sum = train_g + count_ng
-
-print('GAS items:', count_g, 'non GAS items:', count_ng, 'sum:', sum)
-print('Test:', test, 'Train:', train_sum, 'Train GAS:', train_g, 'GAS Train %:', train_g / train_sum)
-
-df_test = df_gas[:test]
-df_train = df_non_gas.append(df_gas[test:], ignore_index=True)
-df_train = commons.shuffle(df_train)
-
-df_test.to_csv('data/test.csv')
-df_train.to_csv('data/train.csv')
+print('Saving data set with embedding')
 df_all.to_csv('data/all.csv')
 
-print('Finished')
