@@ -6,8 +6,9 @@ import numpy as np
 
 # This script performs
 # 1 joining all data from Jira to single dataset
-# 2 adding lower case copy of Jira's text  (REMOVED)
+# 2 save data set
 # 3 splitting data-set to chunks for translation
+# 4 print baseline and human performance on this data set
 
 
 TRANSLATOR_TEXT_LIMIT = 1_000_000
@@ -28,10 +29,13 @@ print('Joining DataSets...')
 
 def preprocess_text(text):
     text = str(text).strip()
+	# TODO: Remove JIRA table || ... |
+	# TODO: Remove links
+	# TODO: Remove extra whitechars
+	# TODO: Build histogramm of text length after all
     if len(text) > TEXT_LENGTH_MAX_LIMIT:
-        print('cutting text with length', len(text))
         # suppose that important information is at the text start and at the text end
-        tail = int(TEXT_LENGTH_MAX_LIMIT * .15)
+        tail = int(TEXT_LENGTH_MAX_LIMIT * .15 + .5)
         head = TEXT_LENGTH_MAX_LIMIT - tail - 1
         return text[:head] + ' ' + text[-tail:]
     if len(text) < TEXT_LENGTH_MIN_LIMIT:
@@ -44,6 +48,7 @@ def read_jiras(paths) -> pd.DataFrame:
     for path in paths:
         df_read = pd.read_csv(path)
         df_chunk = pd.DataFrame()
+		# TODO: Check what data would be usefull for model (priority, labels)
         df_chunk['key'] = df_read['Issue key']
         df_chunk['time'] = df_read['Σ Time Spent'].values / 3600
         df_chunk['estimate'] = df_read['Σ Original Estimate'].values / 3600
@@ -52,6 +57,7 @@ def read_jiras(paths) -> pd.DataFrame:
 
     df['text'] = df['text'].apply(preprocess_text)
     df = df.loc[df['time'] > 0]
+    df = df.loc[df['time'] <= 40]
     df = df.loc[df['text'] != '']
     df['original'] = True
     df['lang'] = 'en'
@@ -60,31 +66,23 @@ def read_jiras(paths) -> pd.DataFrame:
 
 df_gas = read_jiras(gas_sources)
 df_non_gas = read_jiras(non_gas_soures)
+df_gas['gas'] = True
+df_non_gas['gas'] = False
 
 commons.mkdirs('data/trace')
 df_gas.to_csv('data/trace/gas-original.csv')
 df_non_gas.to_csv('data/trace/non-gas-original.csv')
 
-df_gas['gas'] = True
-df_non_gas['gas'] = False
-
 df_all = df_gas.append(df_non_gas, ignore_index=True)
-df_all.to_csv('data/trace/original.csv')
+df_all.to_csv('data/trace/all_original.csv')
 print('Gained data set of', df_all.shape[0], 'elements')
 
-######
+#######
 
-# print('Adding lower-case text copy of data')
-# df_lower_case = df_all.copy(True)
-# df_lower_case['text'] = df_lower_case['text'].apply(lambda text: text.lower())
-# df_lower_case['lower'] = True
-# df_all['lower'] = False
-#
-# df_all = df_all.append(df_lower_case)
-# df_all = df_all.drop_duplicates('text')
-# print('Gained data set of', df_all.shape[0], 'elements')
+print('Saving all data set')
+df_all.to_csv('data/all.csv')
 
-######
+#######
 
 print('Splitting data-set for translation with limit up to', TRANSLATOR_TEXT_LIMIT, 'symbols...')
 
@@ -112,27 +110,21 @@ print('saving final', chunk_number, 'chunk with overall text length', chunk_text
       chunk.shape[0])
 chunk.to_csv('data/original-chunk-{}.csv'.format(chunk_number))
 
-print('Finished')
-
 #######
 
-print('Splitting data set to test and train chunks')
-
-test = int(df_all.shape[0] * 0.2 + 0.5)
-df_test = df_all[:test]
-df_train = df_all[test:]
-
-# df_test.to_csv('data/test.csv')
-# df_train.to_csv('data/train.csv')
-
-print('Finished')
-
+print('Getting baseline numbers')
 
 def mae(y_true, y_pred):
     return np.mean(abs(y_true - y_pred))
+	
+def mape(y_true, y_pred):
+    return np.mean(abs((y_true - y_pred) / y_true)) * 100.
 
 
-baseline_guess = np.median(df_train['time'])
+test = int(df_all['time'].shape[0] * .2 + .5)
+baseline_guess = np.median(df_all['time'][test:])
+df_test = df_all['time'][:test]
 
-print('The baseline guess is a score of %0.2f' % baseline_guess)
-print("Baseline Performance on the test set: MAE = %0.4f" % mae(df_test['time'], baseline_guess))
+print('The baseline guess (median value) from all data set is %0.2f hours' % baseline_guess)
+print('Baseline Performance on test set:   MAE = %0.3fh, MAPE = %.2f%%' % (mae(df_test, baseline_guess), mape(df_test, baseline_guess)))
+print('Human Performance on all data set:  MAE = %0.3fh, MAPE = %.2f%%' % (mae(df_all['time'], df_all['estimate']), mape(df_all['time'], df_all['estimate'])))
