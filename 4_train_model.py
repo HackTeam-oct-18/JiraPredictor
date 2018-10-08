@@ -7,7 +7,7 @@ from tensorflow.keras import metrics
 import commons
 
 print('Reading data set')
-features, labels = commons.read_training_ds('data/all.csv')
+features, labels = commons.read_training_ds('all')
 
 tf.logging.set_verbosity(tf.logging.INFO)
 tf.set_random_seed(42)
@@ -34,6 +34,7 @@ def try_model(arch, lr, reg, dropout, name_prefix, activation='relu', name=None)
 
 
 print('Running training models')
+print("You can run command 'tensorboard --logdir ./logs' to view taraining process in browser")
 try_model((6, 6, 1), 1e-2, 3e-3, 0.35, 'basic model')
 try_model((6, 6, 1), 1e-2, 3e-3, 0.35, 'basic model', 'elu')
 try_model((6, 6, 1), 1e-2, 3e-3, 0.35, 'basic model', 'sigmoid')
