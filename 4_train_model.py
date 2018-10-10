@@ -2,7 +2,10 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import regularizers
 from tensorflow.keras import layers
+from tensorflow.keras import activations
+from tensorflow.python.ops import math_ops
 from tensorflow.keras import metrics
+from tensorflow.python.keras import backend as K
 
 import commons
 
@@ -13,28 +16,40 @@ tf.logging.set_verbosity(tf.logging.INFO)
 tf.set_random_seed(42)
 
 
-def try_model(arch, lr, reg, dropout, name_prefix, activation='relu', name=None):
+def exp(x):
+    return tf.exp(x)
+
+
+def mapemae(y_true, y_pred):
+    rel_diff = math_ops.abs(
+        (y_true - y_pred) / K.clip(math_ops.abs(y_true), K.epsilon(), None))
+    abs_diff = math_ops.abs(
+        (y_true - y_pred) / 6.1)
+    diff = (rel_diff + abs_diff) * .5
+    return 100. * K.mean(diff, axis=-1)
+
+
+def try_model(arch, lr, reg, dropout, name_prefix, activations, loss='mse', batch_size=32, name=None):
     model = keras.Sequential()
 
-    for units in arch:
+    for i in range(len(arch)):
         model.add(layers.Dropout(dropout))
-        model.add(layers.Dense(units, activation=activation, kernel_regularizer=regularizers.l2(reg)))
+        model.add(layers.Dense(arch[i], activation=activations[i], kernel_regularizer=regularizers.l2(reg)))
 
     model.build((None, 512))
     model.compile(optimizer=tf.train.AdagradOptimizer(lr),
-                  loss='mse',       # mean squared error
+                  loss=loss,
                   metrics=[metrics.mape, metrics.mae])
 
     if name is None:
-        name = '{} arch={} lr={} reg={} dropout={} {}'.format(name_prefix, arch, lr, reg, dropout, activation)
+        name = '{} units={} activations={} lr={} reg={} dropout={} batch={}'.format(name_prefix, arch, activations,
+                                                                                    lr, reg, dropout, batch_size)
     print('Going to train model', name)
 
-    model.fit(features, labels, epochs=250, batch_size=32, validation_split=0.2,
+    model.fit(features, labels, epochs=500, batch_size=batch_size, validation_split=0.2,
               callbacks=[keras.callbacks.TensorBoard(log_dir='./logs/' + name)])
 
 
 print('Running training models')
-print("You can run command 'tensorboard --logdir ./logs' to view taraining process in browser")
-try_model((6, 6, 1), 1e-2, 3e-3, 0.35, 'basic model')
-try_model((6, 6, 1), 1e-2, 3e-3, 0.35, 'basic model', 'elu')
-try_model((6, 6, 1), 1e-2, 3e-3, 0.35, 'basic model', 'sigmoid')
+try_model((6, 6, 1), 1e-3, 1e-3, 0.35, 'exp deep  model mape-mae',
+          ('tanh', 'tanh', exp, 'linear'), batch_size=16, loss=mapemae)
