@@ -14,20 +14,10 @@ import commons
 
 
 if environ.get('TFHUB_CACHE_DIR') is None:
-    print("WARINGN: you haven't provide TFHUB_CACHE_DIR system variable, model will be downloaded to temp folder.")
+    print("WARNING: you haven't provide TFHUB_CACHE_DIR system variable, model will be downloaded to temp folder.")
 
-
-
-def join_dataset(paths):
-    df = pd.DataFrame()
-    for path in paths:
-        df_chunk = pd.read_csv(path)
-        df = df.append(df_chunk)
-    return df
-
-
-df_all = join_dataset(('data/original-chunk-0.csv', 'data/original-chunk-1.csv',
-                       'data/original-chunk-2.csv'))
+df_all = commons.join_dataset(('data/original-chunk-0.csv', 'data/original-chunk-1.csv',
+                               'data/original-chunk-2.csv'))
 
 print('Performing Text Embedding...')
 
@@ -38,11 +28,6 @@ with tf.Graph().as_default():
     sentences = tf.placeholder(tf.string, name='sentences')
     module = hub.Module("https://tfhub.dev/google/universal-sentence-encoder/2", trainable=False)
     embeddings = module(sentences)
-
-
-    def embed_datasets(sets):
-        sess = tf.train.MonitoredSession()
-        return (embed_dataset(ds, sess) for ds in sets)
 
 
     def embed_dataset(ds: pd.DataFrame, sess):
@@ -63,16 +48,16 @@ with tf.Graph().as_default():
         return {'embeddings': embeds}
 
 
-    print('preparing datasets')
+    print('preparing data-sets')
     embed_output = embed_dataset(df_all, tf.train.MonitoredSession())
 
 df_all['embedding'] = tuple(embed_output['embeddings'].tolist())
 size = df_all.shape[0]
 df_all = df_all.drop_duplicates('embedding')
-print('Gained data set of {} embedding elements, {} ones were filtred as duplicates'.format(df_all.shape[0], size - df_all.shape[0]))
+print('Gained data set of {} embedding elements, {} ones were filtered as duplicates'.format(df_all.shape[0],
+                                                                                             size - df_all.shape[0]))
 
 #######
 
 print('Saving data set with embedding')
 df_all.to_csv('data/all.csv')
-

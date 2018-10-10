@@ -1,14 +1,16 @@
-import pandas as pd
+import re
 
-import commons
+import pandas as pd
 import numpy as np
 
+import commons
 
 # This script performs
 # 1 joining all data from Jira to single dataset
-# 2 save data set
-# 3 splitting data-set to chunks for translation
-# 4 print baseline and human performance on this data set
+# 2 filter and pre-process input data
+# 3 save data set
+# 4 splitting data-set to chunks for translation
+# 5 print baseline and human performance on this data set
 
 
 TRANSLATOR_TEXT_LIMIT = 1_000_000
@@ -26,13 +28,20 @@ non_gas_soures = (
 
 print('Joining DataSets...')
 
+table_pattern = re.compile("^\|\|.+\|\|($[\r\n(\r\n)]{1}^\|.+\|$)+[\r\n(\r\n)]?", re.MULTILINE)
+eol_pattern = re.compile("[\n\r(\r\n)]{2,}", re.MULTILINE)
+spaces_pattern = re.compile("([ ]{2,})|(\t+)|([ \t]{2,})")
+
 
 def preprocess_text(text):
-    text = str(text).strip()
-	# TODO: Remove JIRA table || ... |
-	# TODO: Remove links
-	# TODO: Remove extra whitechars
-	# TODO: Build histogramm of text length after all
+    text = str(text)
+    text = table_pattern.sub("", text)
+    text = eol_pattern.sub("\n", text)
+    text = spaces_pattern.sub(" ", text)
+    text = text.strip()
+
+    # TODO: Remove links
+    # TODO: Build histogramm of text length after all
     if len(text) > TEXT_LENGTH_MAX_LIMIT:
         # suppose that important information is at the text start and at the text end
         tail = int(TEXT_LENGTH_MAX_LIMIT * .15 + .5)
@@ -48,7 +57,7 @@ def read_jiras(paths) -> pd.DataFrame:
     for path in paths:
         df_read = pd.read_csv(path)
         df_chunk = pd.DataFrame()
-		# TODO: Check what data would be usefull for model (priority, labels)
+        # TODO: Check what data would be useful for model (priority, labels)
         df_chunk['key'] = df_read['Issue key']
         df_chunk['time'] = df_read['Σ Time Spent'].values / 3600
         df_chunk['estimate'] = df_read['Σ Original Estimate'].values / 3600
@@ -74,13 +83,14 @@ df_gas.to_csv('data/trace/gas-original.csv')
 df_non_gas.to_csv('data/trace/non-gas-original.csv')
 
 df_all = df_gas.append(df_non_gas, ignore_index=True)
+df_all = commons.shuffle(df_all)
 df_all.to_csv('data/trace/all_original.csv')
 print('Gained data set of', df_all.shape[0], 'elements')
 
 #######
 
 print('Saving all data set')
-df_all.to_csv('data/all.csv')
+df_all.to_csv('data/all-text.csv')
 
 #######
 
@@ -114,9 +124,11 @@ chunk.to_csv('data/original-chunk-{}.csv'.format(chunk_number))
 
 print('Getting baseline numbers')
 
+
 def mae(y_true, y_pred):
     return np.mean(abs(y_true - y_pred))
-	
+
+
 def mape(y_true, y_pred):
     return np.mean(abs((y_true - y_pred) / y_true)) * 100.
 
@@ -126,5 +138,8 @@ baseline_guess = np.median(df_all['time'][test:])
 df_test = df_all['time'][:test]
 
 print('The baseline guess (median value) from all data set is %0.2f hours' % baseline_guess)
-print('Baseline Performance on test set:   MAE = %0.3fh, MAPE = %.2f%%' % (mae(df_test, baseline_guess), mape(df_test, baseline_guess)))
-print('Human Performance on all data set:  MAE = %0.3fh, MAPE = %.2f%%' % (mae(df_all['time'], df_all['estimate']), mape(df_all['time'], df_all['estimate'])))
+print('Baseline Performance on test set:   MAE = %0.3fh, MAPE = %.2f%%' % (
+    mae(df_test, baseline_guess), mape(df_test, baseline_guess)))
+print('Human Performance on all data set:  MAE = %0.3fh, MAPE = %.2f%%' % (
+    mae(df_all['time'], df_all['estimate']), mape(df_all['time'], df_all['estimate'])))
+
