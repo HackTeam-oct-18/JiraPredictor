@@ -4,6 +4,7 @@ import ast
 import numpy as np
 import pandas as pd
 from numpy import random
+import yandex
 
 
 def shuffle(df: pd.DataFrame) -> pd.DataFrame:
@@ -18,7 +19,6 @@ def mkdirs(dir):
 
 def read_ds(name):
     ds = pd.read_csv('data/{}.csv'.format(name), converters={"embedding": ast.literal_eval})
-    ds = ds.loc[ds['time'] < 30]
     return ds
 
 
@@ -50,3 +50,11 @@ def join_dataset(paths, is_shuffle=False):
         return shuffle(df)
     return df
 
+
+def create_translator(src, dest) -> yandex.Translater:
+    translator = yandex.Translater()
+    translator.set_key(os.environ['Y_KEY'])
+    translator.set_from_lang(src)
+    translator.set_to_lang(dest)
+
+    return translator
