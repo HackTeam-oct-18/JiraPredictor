@@ -9,7 +9,7 @@ from tensorflow.python.framework.errors_impl import InternalError
 import commons
 
 # This script performs
-# 1 joining all data-set chunks after translating
+# 1 joining all data-set given chunks
 # 2 performs model embedding on given data
 
 

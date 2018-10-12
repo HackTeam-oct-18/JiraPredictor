@@ -8,6 +8,10 @@ import pandas as pd
 from numpy import random
 import yandex
 
+# common project utilities
+
+test_train_ration = 0.2
+
 
 def shuffle(df: pd.DataFrame) -> pd.DataFrame:
     vals = df.values
@@ -64,8 +68,8 @@ def create_translator(src, dest) -> yandex.Translater:
     return translator
 
 
-def compose(f, g):
-    return lambda x: f(g(x))
+def compose(upper_fn, inner_fn):
+    return lambda x: upper_fn(inner_fn(x))
 
 
 def create_mapemae(mae_div, scale=100.):

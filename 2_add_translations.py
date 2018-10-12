@@ -4,7 +4,9 @@ import pandas as pd
 
 import commons
 
-translator = commons.create_translator('de', 'en')
+# This script performs
+# 1 text translation en-de-en via Yandex online translator
+
 print('Adding translations...')
 
 
@@ -15,7 +17,7 @@ def apply_translate_chain(text, chain):
     return text
 
 
-def append_translations(df: pd.DataFrame):
+def create_translations(df: pd.DataFrame):
     translate_chains = [[commons.create_translator('en', 'de'), commons.create_translator('de', 'en')]]
 
     all_df = df[0:0]
@@ -47,5 +49,5 @@ def append_translations(df: pd.DataFrame):
 
 
 df = commons.read_ds('original-chunk-2')
-df = append_translations(df)
+df = create_translations(df)
 df.to_csv('data/tr-chunk-2.csv')

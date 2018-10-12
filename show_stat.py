@@ -1,5 +1,8 @@
 import pandas as pd
 
+# This script performs
+# 1 showing baseline numbers for given data set
+
 df = pd.read_csv('data/all.csv')
 time = df['time']
 estimate = df['estimate']
