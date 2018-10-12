@@ -40,10 +40,10 @@ def expand_nparray_of_lists(nparr):
     return np.asarray(rows)
 
 
-def join_dataset(paths, is_shuffle=False):
+def join_dataset(names, is_shuffle=False):
     df = pd.DataFrame()
-    for path in paths:
-        df_chunk = pd.read_csv(path)
+    for name in names:
+        df_chunk = pd.read_csv("data/%s.csv" % name)
         df = df.append(df_chunk)
 
     if is_shuffle:

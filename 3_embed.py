@@ -16,8 +16,8 @@ import commons
 if environ.get('TFHUB_CACHE_DIR') is None:
     print("WARNING: you haven't provide TFHUB_CACHE_DIR system variable, model will be downloaded to temp folder.")
 
-df_all = commons.join_dataset(('data/original-chunk-0.csv', 'data/original-chunk-1.csv',
-                               'data/original-chunk-2.csv'))
+df_all = commons.join_dataset(('original-chunk-0', 'original-chunk-1',
+                               'original-chunk-2', 'tr-chunk-2'))
 
 print('Performing Text Embedding...')
 
