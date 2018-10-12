@@ -1,32 +1,18 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import regularizers
 from tensorflow.keras import layers
 from tensorflow.keras import activations
-from tensorflow.python.ops import math_ops
 from tensorflow.keras import metrics
-from tensorflow.python.keras import backend as K
+from tensorflow.keras import regularizers
 
 import commons
 
 print('Reading data set')
-features, labels = commons.read_training_ds('all')
+features, labels = commons.read_training_ds('reduced')
 
 tf.logging.set_verbosity(tf.logging.INFO)
 tf.set_random_seed(42)
-
-
-def exp(x):
-    return tf.exp(x)
-
-
-def mapemae(y_true, y_pred):
-    rel_diff = math_ops.abs(
-        (y_true - y_pred) / K.clip(math_ops.abs(y_true), K.epsilon(), None))
-    abs_diff = math_ops.abs(
-        (y_true - y_pred) / 6.1)
-    diff = (rel_diff + abs_diff) * .5
-    return 100. * K.mean(diff, axis=-1)
 
 
 def try_model(arch, lr, reg, dropout, name_prefix, activations, loss='mse', batch_size=32, name=None):
@@ -36,7 +22,7 @@ def try_model(arch, lr, reg, dropout, name_prefix, activations, loss='mse', batc
         model.add(layers.Dropout(dropout))
         model.add(layers.Dense(arch[i], activation=activations[i], kernel_regularizer=regularizers.l2(reg)))
 
-    model.build((None, 512))
+    model.build((None, 64))
     model.compile(optimizer=tf.train.AdagradOptimizer(lr),
                   loss=loss,
                   metrics=[metrics.mape, metrics.mae])
@@ -46,10 +32,10 @@ def try_model(arch, lr, reg, dropout, name_prefix, activations, loss='mse', batc
                                                                                     lr, reg, dropout, batch_size)
     print('Going to train model', name)
 
-    model.fit(features, labels, epochs=500, batch_size=batch_size, validation_split=0.2,
+    model.fit(features, labels, epochs=250, batch_size=batch_size, validation_split=0.2,
               callbacks=[keras.callbacks.TensorBoard(log_dir='./logs/' + name)])
 
 
 print('Running training models')
-try_model((6, 6, 1), 1e-3, 1e-3, 0.35, 'exp deep  model mape-mae',
-          ('tanh', 'tanh', exp, 'linear'), batch_size=16, loss=mapemae)
+try_model((64, 18, 1), 1e-3, 1e-3, 0.15, 'exp deep mape-mae model',
+          ('tanh', commons.compose(tf.exp, activations.tanh), 'relu'), batch_size=16, loss=commons.create_mapemae(np.max(labels)))

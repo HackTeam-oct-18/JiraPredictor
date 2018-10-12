@@ -1,6 +1,8 @@
 import os
 import ast
 
+from tensorflow.python.keras import backend as K
+from tensorflow.python.ops import math_ops
 import numpy as np
 import pandas as pd
 from numpy import random
@@ -18,16 +20,18 @@ def mkdirs(dir):
 
 
 def read_ds(name):
-    ds = pd.read_csv('data/{}.csv'.format(name), converters={"embedding": ast.literal_eval})
+    ds = pd.read_csv('data/{}.csv'.format(name), converters={"embedding": ast.literal_eval,
+                                                             "reduced_embedding": ast.literal_eval})
     return ds
 
 
 def read_training_ds(name, is_shuffle=False):
-    data = read_ds(name)[['embedding', 'time']]
+    data = read_ds(name)[['reduced_embedding', 'time', 'original']]
     if is_shuffle:
         data = shuffle(data)
+    data = data.sort_values('original') # translated ones will be in train set
     labels = data['time'].values
-    features = expand_nparray_of_lists(data['embedding'].values)
+    features = expand_nparray_of_lists(data['reduced_embedding'].values)
     print(features.shape)
     print(labels.shape)
     return features, labels
@@ -58,3 +62,16 @@ def create_translator(src, dest) -> yandex.Translater:
     translator.set_to_lang(dest)
 
     return translator
+
+
+def compose(f, g):
+    return lambda x: f(g(x))
+
+
+def create_mapemae(mae_div, scale=100.):
+    def mapemae(y_true, y_pred):
+        mae = math_ops.abs(y_true - y_pred)
+        mape = mae / K.clip(math_ops.abs(y_true), K.epsilon(), None)
+        return scale * K.mean(mape + mae/mae_div, axis=-1)
+
+    return mapemae
