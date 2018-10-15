@@ -51,5 +51,5 @@ def try_model(arch, lr, reg, dropout, name_prefix, activations, loss='mse', batc
 
 print('Running training models')
 try_model((64, 18, 1), 1e-3, 1e-3, 0.15, 'exp deep mape-mae model',
-          ('tanh', 'tanh', commons.compose(tf.exp, activations.tanh)), batch_size=32,
+          ('elu', 'elu', tf.exp), batch_size=32,
           loss=commons.create_mapemae(np.max(labels)))
