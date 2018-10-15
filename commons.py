@@ -26,14 +26,13 @@ def mkdirs(dir):
 def read_ds(name):
     ds = pd.read_csv('data/{}.csv'.format(name), converters={"embedding": ast.literal_eval,
                                                              "reduced_embedding": ast.literal_eval})
-    return ds
+    return ds.sort_values('original') # translated ones will be in train set
 
 
 def read_training_ds(name, is_shuffle=False):
     data = read_ds(name)[['reduced_embedding', 'time', 'original']]
     if is_shuffle:
         data = shuffle(data)
-    data = data.sort_values('original') # translated ones will be in train set
     labels = data['time'].values
     features = expand_nparray_of_lists(data['reduced_embedding'].values)
     print(features.shape)

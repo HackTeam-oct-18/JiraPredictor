@@ -10,10 +10,9 @@ import commons
 # 2 filter and pre-process input data
 # 3 save data set
 # 4 splitting data-set to chunks for translation
-# 5 print baseline and human performance on this data set
 
 
-TRANSLATOR_TEXT_LIMIT = 1_000_000
+TRANSLATOR_TEXT_LIMIT = 1_000_000 / 2
 TEXT_LENGTH_MAX_LIMIT = 512
 TEXT_LENGTH_MIN_LIMIT = 8
 
@@ -90,7 +89,7 @@ print('Gained data set of', df_all.shape[0], 'elements')
 #######
 
 print('Saving all data set')
-df_all.to_csv('data/all-text.csv')
+df_all.to_csv('data/text.csv')
 
 #######
 
@@ -119,27 +118,3 @@ for row in df_all.values[:]:
 print('saving final', chunk_number, 'chunk with overall text length', chunk_text_length, 'and overall row number',
       chunk.shape[0])
 chunk.to_csv('data/original-chunk-{}.csv'.format(chunk_number))
-
-#######
-
-print('Getting baseline numbers')
-
-
-def mae(y_true, y_pred):
-    return np.mean(abs(y_true - y_pred))
-
-
-def mape(y_true, y_pred):
-    return np.mean(abs((y_true - y_pred) / y_true)) * 100.
-
-
-test = int(df_all['time'].shape[0] * .2 + .5)
-baseline_guess = np.median(df_all['time'][test:])
-df_test = df_all['time'][:test]
-
-print('The baseline guess (median value) from all data set is %0.2f hours' % baseline_guess)
-print('Baseline Performance on test set:   MAE = %0.3fh, MAPE = %.2f%%' % (
-    mae(df_test, baseline_guess), mape(df_test, baseline_guess)))
-print('Human Performance on all data set:  MAE = %0.3fh, MAPE = %.2f%%' % (
-    mae(df_all['time'], df_all['estimate']), mape(df_all['time'], df_all['estimate'])))
-
