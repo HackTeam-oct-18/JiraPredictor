@@ -16,16 +16,13 @@ import commons
 if environ.get('TFHUB_CACHE_DIR') is None:
     print("WARNING: you haven't provide TFHUB_CACHE_DIR system variable, model will be downloaded to temp folder.")
 
-df_all = commons.join_dataset(('original-chunk-0', 'original-chunk-1',
-                               'original-chunk-2', 'original-chunk-3',
-                               'original-chunk-4'))
-
-print('Performing Text Embedding...')
+print('Reading data set')
+df_all = commons.join_dataset('original-chunk-*')
 
 tf.logging.set_verbosity(tf.logging.INFO)
 tf.set_random_seed(42)
 
-with tf.Graph().as_default():
+with tf.device('/cpu:0'):
     sentences = tf.placeholder(tf.string, name='sentences')
     module = hub.Module("https://tfhub.dev/google/universal-sentence-encoder/2", trainable=False)
     embeddings = module(sentences)
@@ -48,12 +45,12 @@ with tf.Graph().as_default():
             print(embeds.shape)
         return {'embeddings': embeds}
 
-
-    print('preparing data-sets')
+    print('Performing Text Embedding...')
     embed_output = embed_dataset(df_all, tf.train.MonitoredSession())
 
 df_all['embedding'] = tuple(embed_output['embeddings'].tolist())
 size = df_all.shape[0]
+print('Dropping duplicates')
 df_all = df_all.drop_duplicates('embedding')
 print('Gained data set of {} embedding elements, {} ones were filtered as duplicates'.format(df_all.shape[0],
                                                                                              size - df_all.shape[0]))

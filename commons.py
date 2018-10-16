@@ -1,5 +1,6 @@
 import os
 import ast
+import glob
 
 from tensorflow.python.keras import backend as K
 from tensorflow.python.ops import math_ops
@@ -47,10 +48,10 @@ def expand_nparray_of_lists(nparr):
     return np.asarray(rows)
 
 
-def join_dataset(names, is_shuffle=False):
+def join_dataset(name_regex, is_shuffle=False):
     df = pd.DataFrame()
-    for name in names:
-        df_chunk = pd.read_csv("data/%s.csv" % name)
+    for name in glob.glob('data/%s.csv' % name_regex):
+        df_chunk = pd.read_csv(name)
         df = df.append(df_chunk)
 
     if is_shuffle:

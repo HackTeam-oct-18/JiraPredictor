@@ -1,15 +1,15 @@
 import re
 
 import pandas as pd
-import numpy as np
 
 import commons
 
 # This script performs
 # 1 joining all data from Jira to single dataset
 # 2 filter and pre-process input data
-# 3 save data set
-# 4 splitting data-set to chunks for translation
+# 3 for long texts in Jira drops text's center in with different head-tail chars ratio
+# 4 save data set
+# 5 splitting data-set to chunks for translation
 
 
 TRANSLATOR_TEXT_LIMIT = 1_000_000 / 2
@@ -41,14 +41,26 @@ def preprocess_text(text):
 
     # TODO: Remove links
     # TODO: Build histogramm of text length after all
-    if len(text) > TEXT_LENGTH_MAX_LIMIT:
-        # suppose that important information is at the text start and at the text end
-        tail = int(TEXT_LENGTH_MAX_LIMIT * .15 + .5)
-        head = TEXT_LENGTH_MAX_LIMIT - tail - 1
-        return text[:head] + ' ' + text[-tail:]
     if len(text) < TEXT_LENGTH_MIN_LIMIT:
         return ''
     return text
+
+
+def create_cut_center(head_tail_ratio):
+    def cut_center(text):
+        if len(text) > TEXT_LENGTH_MAX_LIMIT:
+            head = int(TEXT_LENGTH_MAX_LIMIT * head_tail_ratio + .5)
+            tail = TEXT_LENGTH_MAX_LIMIT - head - 1
+
+            if tail > 0 and head > 0:
+                return text[:head] + '.' + text[-tail:]
+            else:
+                if tail <= 0:
+                    return text[:TEXT_LENGTH_MAX_LIMIT]
+                else:
+                    return text[-TEXT_LENGTH_MAX_LIMIT:]
+        return text
+    return cut_center
 
 
 def read_jiras(paths) -> pd.DataFrame:
@@ -69,7 +81,16 @@ def read_jiras(paths) -> pd.DataFrame:
     df = df.loc[df['text'] != '']
     df['original'] = True
     df['lang'] = 'en'
-    return commons.shuffle(df)
+
+    # take different parts of long text, will increase data
+    mult_df = df[0:0]
+    for ratio in (.18, .36, .64, .82):
+        df_tmp = df[:]
+        df_tmp['text'] = df_tmp['text'].apply(create_cut_center(ratio))
+        mult_df = mult_df.append(df_tmp)
+        df['keep_head_tail_ration'] = ratio
+
+    return commons.shuffle(mult_df)
 
 
 df_gas = read_jiras(gas_sources)
@@ -83,8 +104,13 @@ df_non_gas.to_csv('data/trace/non-gas-original.csv')
 
 df_all = df_gas.append(df_non_gas, ignore_index=True)
 df_all = commons.shuffle(df_all)
+
+size = df_all.shape[0]
+print('Dropping duplicates')
+df_all = df_all.drop_duplicates('text')
+print('Gained data set of {} jiras, {} ones were filtered as duplicates'.format(df_all.shape[0],
+                                                                                             size - df_all.shape[0]))
 df_all.to_csv('data/trace/all_original.csv')
-print('Gained data set of', df_all.shape[0], 'elements')
 
 #######
 
@@ -108,13 +134,13 @@ for row in df_all.values[:]:
         chunk_text_length = new_chunk_text_length
         chunk = chunk.append(pd.DataFrame(row, columns=df_all.keys()))
     else:
-        print('saving', chunk_number, 'chunk with overall text length', chunk_text_length, 'and overall row number',
+        print('saving', chunk_number, 'chunk with overall text length', chunk_text_length, 'and overall rows number',
               chunk.shape[0])
         chunk.to_csv('data/original-chunk-{}.csv'.format(chunk_number))
         chunk_number += 1
         chunk_text_length = new_text_length
         chunk = pd.DataFrame(columns=df_all.keys(), data=row)
 
-print('saving final', chunk_number, 'chunk with overall text length', chunk_text_length, 'and overall row number',
+print('saving', chunk_number, 'chunk with overall text length', chunk_text_length, 'and overall rows number',
       chunk.shape[0])
 chunk.to_csv('data/original-chunk-{}.csv'.format(chunk_number))
