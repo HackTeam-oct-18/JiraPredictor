@@ -25,26 +25,20 @@ tf.set_random_seed(42)
 
 
 def add_priorities(df: pd.DataFrame):
-    df.loc[:, 'P0'] = 0.
-    df.loc[:, 'P1'] = 0.
-    df.loc[:, 'P2'] = 0.
-    df.loc[:, 'P3'] = 0.
-    df.loc[:, 'P4'] = 0.
-    df.loc[:, 'PU'] = 0.
-
+    priority_val_map = {'P0': 1.05, 'P1': 1., 'P2': .3, 'PU': 0., 'P3': -.3, 'P4': -1.}
     for row in range(df.shape[0]):
         priority = df['priority'][row]
-        df.loc[row, priority] = 1.
+        df.loc[row, 'priority_val'] = priority_val_map[priority]
 
     return df
 
 
-print('Adding priority labels', df_all.shape)
+print('Adding priority labels')
 df_all = add_priorities(df_all)
 
 ######
 
-print('Adding text embedding', df_all.shape)
+print('Adding text embedding')
 with tf.device('/cpu:0'):
     sentences = tf.placeholder(tf.string, name='sentences')
     module = hub.Module("https://tfhub.dev/google/universal-sentence-encoder/2", trainable=False)

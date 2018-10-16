@@ -30,6 +30,8 @@ print('Joining DataSets...')
 table_pattern = re.compile("^\|\|.+\|\|($[\r\n(\r\n)]{1}^\|.+\|$)+[\r\n(\r\n)]?", re.MULTILINE)
 eol_pattern = re.compile("[\n\r(\r\n)]{2,}", re.MULTILINE)
 spaces_pattern = re.compile("([ ]{2,})|(\t+)|([ \t]{2,})")
+priorities_names = {'SOS': 'P0', 'Critical': 'P1', 'High': 'P2',
+                    'Medium': 'P3', 'Low': 'P4', 'Undefined': 'PU'}
 
 
 def preprocess_text(text):
@@ -61,10 +63,6 @@ def create_cut_center(head_tail_ratio):
                     return text[-TEXT_LENGTH_MAX_LIMIT:]
         return text
     return cut_center
-
-
-priorities_names = {'SOS': 'P0', 'Critical': 'P1', 'High': 'P2',
-                    'Medium': 'P3', 'Low': 'P4', 'Undefined': 'PU'}
 
 
 def read_jiras(paths) -> pd.DataFrame:
