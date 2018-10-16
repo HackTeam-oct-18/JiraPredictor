@@ -1,10 +1,9 @@
-import math
+import time
 
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras import losses
 from tensorflow.keras import metrics
 from tensorflow.keras import regularizers
 
@@ -17,6 +16,11 @@ import commons
 
 print('Reading data set')
 features, labels = commons.read_sequence_training_ds('reduced')
+
+tf_board_log_dir_root = './logs/'
+model_checkpoints_dir_root = './models_cache/chkpts/'
+commons.mkdirs(tf_board_log_dir_root)
+commons.mkdirs(model_checkpoints_dir_root)
 
 tf.logging.set_verbosity(tf.logging.INFO)
 tf.set_random_seed(42)
@@ -35,14 +39,18 @@ def try_sequential_model(arch, lr, reg, dropout, name_prefix, activations, loss=
                   metrics=[metrics.mape, metrics.mae, metrics.mse, commons.mspe])
 
     if name is None:
-        name = '{} units={} activations={} lr={} reg={} dropout={} batch={}'.format(name_prefix, arch, activations,
-                                                                                    lr, reg, dropout, batch_size)
+        name = '{} units={} #{}'.format(name_prefix, arch, int(time.time() + 0.5))
     print('Going to train model', name)
 
     model.fit(features, labels, epochs=250, batch_size=batch_size, validation_split=commons.test_train_ration,
-              callbacks=[keras.callbacks.TensorBoard(log_dir='./logs/' + name)])
+              callbacks=[keras.callbacks.TensorBoard(log_dir= tf_board_log_dir_root + name),
+                         keras.callbacks.ModelCheckpoint(model_checkpoints_dir_root + name + '-best.cpt', save_best_only=True),
+                         keras.callbacks.ModelCheckpoint(model_checkpoints_dir_root + name + '-last.cpt')])
 
 
 print('Running training models')
-try_sequential_model((36, 1), 5e-2, 3e-2, 0.5, 'linear 1mspe model with p',
+try_sequential_model((64, 18, 1), 1e-3, 1e-3, 0.15, '1exp deep mape-mae model',
+          ('elu', 'elu', tf.exp), batch_size=32,
+          loss=commons.create_mapemae(np.max(labels)))
+try_sequential_model((36, 1), 5e-2, 3e-2, 0.5, '1linear 1mspe model with p',
                      ('relu', 'linear'), batch_size=32, loss=commons.mspe)
