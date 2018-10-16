@@ -29,13 +29,16 @@ def read_ds(name):
     return ds
 
 
-def read_training_ds(name, is_shuffle=False):
-    data = read_ds(name)[['reduced_embedding', 'time', 'original']]
+def read_sequence_training_ds(name, is_shuffle=False):
+    data = read_ds(name)[['reduced_embedding', 'time', 'original', 'P0', 'P1', 'P2', 'P3', 'P4', 'PU']]
     if is_shuffle:
         data = shuffle(data)
-    data = data.sort_values('original') # translated ones will be in train set
+    data = data.sort_values('original')  # translated ones will be in train set
     labels = data['time'].values
-    features = expand_nparray_of_lists(data['reduced_embedding'].values)
+    embeds = expand_nparray_of_lists(data['reduced_embedding'].values)
+    priors = data[['P0', 'P1', 'P2', 'P3', 'P4', 'PU']].values # looks like doesn't work
+    features = np.append(embeds, priors, 1)
+
     print(features.shape)
     print(labels.shape)
     return features, labels
@@ -56,6 +59,7 @@ def join_dataset(names, is_shuffle=False):
 
     if is_shuffle:
         return shuffle(df)
+    df = pd.DataFrame(data=df.values, columns=df.keys())
     return df
 
 
@@ -76,6 +80,15 @@ def create_mapemae(mae_div, scale=100.):
     def mapemae(y_true, y_pred):
         mae = math_ops.abs(y_true - y_pred)
         mape = mae / K.clip(math_ops.abs(y_true), K.epsilon(), None)
-        return scale * K.mean(mape + mae/mae_div, axis=-1)
+        return scale * K.mean(mape + mae / mae_div, axis=-1)
 
     return mapemae
+
+
+def mean_squared_percentage_error(y_true, y_pred):
+    diff = math_ops.square(
+        (y_true - y_pred) / K.clip(math_ops.abs(y_true), K.epsilon(), None))
+    return 100. * K.mean(diff, axis=-1)
+
+
+mspe = mean_squared_percentage_error
