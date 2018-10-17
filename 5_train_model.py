@@ -48,8 +48,7 @@ def try_sequential_model(arch, lr, reg, dropout, name_prefix, activations, loss,
                          keras.callbacks.ModelCheckpoint(model_checkpoints_dir_root + name + '-best.cpt', save_best_only=True),
                          keras.callbacks.ModelCheckpoint(model_checkpoints_dir_root + name + '-last.cpt'),
                          keras.callbacks.TerminateOnNaN(),
-                         keras.callbacks.EarlyStopping(min_delta=7e-3, patience=15)
-                         ])
+                         keras.callbacks.EarlyStopping(min_delta=1e-8, patience=30)])
 
 
 print('Running training models')
