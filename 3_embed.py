@@ -25,10 +25,14 @@ tf.set_random_seed(42)
 
 
 def add_priorities(df: pd.DataFrame):
-    priority_val_map = {'P0': 1.05, 'P1': 1., 'P2': .3, 'PU': 0., 'P3': -.3, 'P4': -1.}
+    priority_val_map = {'P0': 1., 'P1': .33, 'P2': 0., 'PU': 0., 'P3': -.33, 'P4': -1.}
     for row in range(df.shape[0]):
         priority = df['priority'][row]
         df.loc[row, 'priority_val'] = priority_val_map[priority]
+        if priority == 'PU':
+            df.loc[row, 'priority_unknown'] = 1.
+        else:
+            df.loc[row, 'priority_unknown'] = 0.
 
     return df
 

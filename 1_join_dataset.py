@@ -91,7 +91,7 @@ def read_jiras(paths) -> pd.DataFrame:
 
     # take different parts of long text, will increase data
     mult_df = df[0:0]
-    for ratio in (.18, .82):
+    for ratio in (.15, 0.5, .85):
         df_tmp = df[:]
         df_tmp['text'] = df_tmp['text'].apply(create_cut_center(ratio))
         mult_df = mult_df.append(df_tmp)
