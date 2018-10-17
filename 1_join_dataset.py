@@ -30,6 +30,8 @@ print('Joining DataSets...')
 table_pattern = re.compile("^\|\|.+\|\|($[\r\n(\r\n)]{1}^\|.+\|$)+[\r\n(\r\n)]?", re.MULTILINE)
 eol_pattern = re.compile("[\n\r(\r\n)]{2,}", re.MULTILINE)
 spaces_pattern = re.compile("([ ]{2,})|(\t+)|([ \t]{2,})")
+code_n_color_pattern = re.compile("{((code)|(color))(:[a-zA-Z0-9#]+)?}")
+
 priorities_names = {'SOS': 'P0', 'Critical': 'P1', 'High': 'P2',
                     'Medium': 'P3', 'Low': 'P4', 'Undefined': 'PU'}
 
@@ -37,6 +39,7 @@ priorities_names = {'SOS': 'P0', 'Critical': 'P1', 'High': 'P2',
 def preprocess_text(text):
     text = str(text)
     text = table_pattern.sub("", text)
+    text = code_n_color_pattern.sub("", text)
     text = eol_pattern.sub("\n", text)
     text = spaces_pattern.sub(" ", text)
     text = text.strip()
@@ -88,7 +91,7 @@ def read_jiras(paths) -> pd.DataFrame:
 
     # take different parts of long text, will increase data
     mult_df = df[0:0]
-    for ratio in (.18, .36, .64, .82):
+    for ratio in (.18, .82):
         df_tmp = df[:]
         df_tmp['text'] = df_tmp['text'].apply(create_cut_center(ratio))
         mult_df = mult_df.append(df_tmp)

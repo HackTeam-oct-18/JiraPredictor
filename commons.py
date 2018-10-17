@@ -30,7 +30,7 @@ def read_ds(name):
     return ds.sort_values('original') # translated ones will be in train set
 
 
-def read_sequence_training_ds(name, is_shuffle=False):
+def read_sequence_training_ds(name, inputs=('reduced_embedding', 'priority_val'), is_shuffle=False):
     data = read_ds(name)[['reduced_embedding', 'time', 'original', 'priority_val']]
     if is_shuffle:
         data = shuffle(data)
@@ -38,7 +38,8 @@ def read_sequence_training_ds(name, is_shuffle=False):
     labels = data['time'].values
     embeds = expand_nparray_of_lists(data['reduced_embedding'].values)
     priors = data[['priority_val']].values # looks like doesn't work
-    features = np.append(embeds, priors, 1)
+    # features = np.append(embeds, priors, 1)
+    features = embeds
 
     print(features.shape)
     print(labels.shape)
@@ -75,6 +76,15 @@ def create_translator(src, dest) -> yandex.Translater:
 
 def compose(upper_fn, inner_fn):
     return lambda x: upper_fn(inner_fn(x))
+
+
+def create_mspemse(mse_div, scale=100.):
+    def mspemse(y_true, y_pred):
+        mse = math_ops.square(y_true - y_pred)
+        mspe = mse / K.clip(math_ops.square(y_true), K.epsilon(), None)
+        return scale * K.mean(mspe + mse / mse_div, axis=-1)
+
+    return mspemse
 
 
 def create_mapemae(mae_div, scale=100.):

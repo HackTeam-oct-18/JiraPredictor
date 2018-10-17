@@ -5,6 +5,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras import metrics
 from tensorflow.keras import regularizers
+import numpy as np
 
 import commons
 
@@ -32,13 +33,13 @@ def try_sequential_model(arch, lr, reg, dropout, name_prefix, activations, loss=
         model.add(layers.Dropout(dropout))
         model.add(layers.Dense(arch[i], activation=activations[i], kernel_regularizer=regularizers.l2(reg)))
 
-    model.build((None, 65))
+    model.build((None, 64))
     model.compile(optimizer=tf.train.AdagradOptimizer(lr),
                   loss=loss,
                   metrics=[metrics.mape, metrics.mae, metrics.mse, commons.mspe])
 
     if name is None:
-        name = '{} units={} #{}'.format(name_prefix, arch, int(time.time()))
+        name = '{} units={} lr={} #{}'.format(name_prefix, arch, lr, int(time.time()))
     print('Going to train model', name)
 
     model.fit(features, labels, epochs=250, batch_size=batch_size, validation_split=commons.test_train_ration,
@@ -48,5 +49,5 @@ def try_sequential_model(arch, lr, reg, dropout, name_prefix, activations, loss=
 
 
 print('Running training models')
-try_sequential_model((49, 28, 16, 1), 1e-2, 1e-4, 0.25, 'exp deep mspe model',
-                     ('elu', 'elu', 'elu', tf.exp), batch_size=32, loss=commons.mspe)
+try_sequential_model((64, 18, 1), 3e-2, 5e-3, 0.15, 'exp deep msemspe',
+                     ('elu', 'elu', tf.exp), batch_size=32, loss=commons.create_mspemse(np.mean(labels) ** 2))
