@@ -30,15 +30,25 @@ def read_ds(name):
     return ds.sort_values('original') # translated ones will be in train set
 
 
-def read_sequence_training_ds(name, inputs=('reduced_embedding', 'priority_val'), is_shuffle=False):
-    data = read_ds(name)[['reduced_embedding', 'time', 'original', 'priority_val', 'priority_unknown']]
+def read_sequence_training_ds(name, is_shuffle=False):
+    data = read_ds(name)[['reduced_embedding', 'time', 'original', 'priority_val', 'priority_unknown',
+                          'component_hash', 'project_id_hash', 'reporter_hash', 'label_hash',
+                          'is_AXNASEAN', 'is_AXNCH', 'is_AXNTW', 'is_AXNAU', 'is_AXNCEE',
+                          'is_AXNCN', 'is_AXNKR', 'is_AXNMY',
+                          'is_AXNGA', 'is_AXNIN', 'is_AXON', 'is_AXNTH', 'is_GSGN'
+                          ]]
     if is_shuffle:
         data = shuffle(data)
     data = data.sort_values('original')  # translated ones will be in train set
     labels = data['time'].values
     embeds = expand_nparray_of_lists(data['reduced_embedding'].values)
-    priors = data[['priority_val', 'priority_unknown']].values # looks like doesn't work
+    priors = data[['priority_val', 'priority_unknown']].values
+    # hashes = data[['component_hash', 'project_id_hash', 'reporter_hash', 'label_hash']].values
+    # is_regions = data[['is_AXNASEAN', 'is_AXNCH', 'is_AXNTW', 'is_AXNAU', 'is_AXNCEE',
+    #                       'is_AXNCN', 'is_AXNKR', 'is_AXNMY',
+    #                       'is_AXNGA', 'is_AXNIN', 'is_AXON', 'is_AXNTH', 'is_GSGN']].values
     features = np.append(embeds, priors, 1)
+    # features = np.append(features, is_regions, 1)
     # features = embeds
 
     print(features.shape)

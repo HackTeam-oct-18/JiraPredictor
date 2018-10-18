@@ -1,4 +1,5 @@
 from os import environ
+import sys
 
 import pandas as pd
 import tensorflow as tf
@@ -37,8 +38,40 @@ def add_priorities(df: pd.DataFrame):
     return df
 
 
+def hash_string(text: str):
+    hash = 0
+    if text != '':
+        hash = text.__hash__()
+    return hash / sys.maxsize
+
+
+def add_hash(df, col):
+    new_col = col + '_hash'
+    df[new_col] = df[col].apply(hash_string)
+    df[new_col] = (df[new_col] - df[new_col].mean()) / df[new_col].max()
+
+
+def add_is_region(df, regionnnn):
+    def mapper(reg):
+        if reg == regionnnn:
+            return 1.
+        else:
+            return 0.
+
+    df['is_' + regionnnn] = df['project_id'].apply(mapper)
+
+
 print('Adding priority labels')
 df_all = add_priorities(df_all)
+
+print('Adding hashes')
+for col in ('component', 'project_id', 'reporter', 'label'):
+    add_hash(df_all, col)
+
+print('Adding is region')
+for region in ['AXNASEAN', 'AXNCH', 'AXNTW', 'AXNAU', 'AXNCEE', 'AXNCN', 'AXNKR', 'AXNMY',
+               'AXNGA', 'AXNIN', 'AXON', 'AXNTH', 'GSGN']:
+    add_is_region(df_all, region)
 
 ######
 
@@ -71,8 +104,8 @@ with tf.device('/cpu:0'):
 
 df_all['embedding'] = tuple(embed_output['embeddings'].tolist())
 size = df_all.shape[0]
-print('Dropping duplicates')
-df_all = df_all.drop_duplicates('embedding')
+# print('Dropping duplicates')
+# df_all = df_all.drop_duplicates('embedding')
 print('Gained data set of {} embedding elements, {} ones were filtered as duplicates'.format(df_all.shape[0],
                                                                                              size - df_all.shape[0]))
 #######

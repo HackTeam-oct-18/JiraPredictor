@@ -33,7 +33,7 @@ def try_sequential_model(arch, lr, reg, dropout, name_prefix, activations, loss,
         model.add(layers.Dropout(dropout))
         model.add(layers.Dense(arch[i], activation=activations[i], kernel_regularizer=regularizers.l2(reg)))
 
-    model.build((None, 66))
+    model.build((None, 130))
     model.compile(optimizer=tf.train.AdadeltaOptimizer(lr, rho=0.99),
     # model.compile(optimizer=tf.train.AdagradOptimizer(lr),
                   loss=loss,
@@ -53,4 +53,4 @@ def try_sequential_model(arch, lr, reg, dropout, name_prefix, activations, loss,
 
 print('Running training models')
 try_sequential_model((64, 18, 1), 1e-3, 3e-3, 0.5, 'exp deep mse-mspe',
-                     ('elu', 'elu', tf.exp), batch_size=32, loss=commons.create_mspemse(np.mean(labels) ** 2))
+                     ('elu', 'elu', tf.exp), batch_size=32, loss=commons.mspe)

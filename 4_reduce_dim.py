@@ -14,7 +14,7 @@ train_embeds = commons.expand_nparray_of_lists(train_df['embedding'].values)
 all_embeds = commons.expand_nparray_of_lists(all_df['embedding'].values)
 
 print('Fitting TruncatedSVD with train data')
-svd = TruncatedSVD(n_components=64, n_iter=50, random_state=42)
+svd = TruncatedSVD(n_components=128, n_iter=50, random_state=42)
 svd.fit(train_embeds)
 
 print('Reducing dimensionality for all data set')

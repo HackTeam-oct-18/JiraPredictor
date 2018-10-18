@@ -16,14 +16,7 @@ TRANSLATOR_TEXT_LIMIT = 1_000_000 / 2
 TEXT_LENGTH_MAX_LIMIT = 512
 TEXT_LENGTH_MIN_LIMIT = 8
 
-gas_sources = ('data/jira-exports/AXNGA.0-4000.980.csv', 'data/jira-exports/AXNGA.4000-8500.965.csv',
-               'data/jira-exports/AXNGA.8500-14000.984.csv', 'data/jira-exports/AXNGA.14000-20000.915.csv',
-               'data/jira-exports/AXNGA.20000-.101.csv')
-non_gas_soures = (
-    'data/jira-exports/AXNAU.305.csv', 'data/jira-exports/AXNCEE.823.csv', 'data/jira-exports/AXNIN.9.csv',
-    'data/jira-exports/GSGN.66.csv', 'data/jira-exports/AXON-AXNTH.2.csv',
-    'data/jira-exports/AXNCN-AXNKR-AXNMY.955.csv',
-    'data/jira-exports/AXNASEAN-AXNCH-AXNTW.982.csv')
+sources = [('data/jira-exports/%d.csv') % i for i in range(1, 40)]
 
 print('Joining DataSets...')
 
@@ -33,7 +26,7 @@ spaces_pattern = re.compile("([ ]{2,})|(\t+)|([ \t]{2,})")
 code_n_color_pattern = re.compile("{((code)|(color))(:[a-zA-Z0-9#]+)?}")
 
 priorities_names = {'SOS': 'P0', 'Critical': 'P1', 'High': 'P2',
-                    'Medium': 'P3', 'Low': 'P4', 'Undefined': 'PU'}
+                    'Medium': 'P3', 'Minor': 'P3', 'Low': 'P4', 'Disagree': 'P4', 'Undefined': 'PU'}
 
 
 def preprocess_text(text):
@@ -75,11 +68,28 @@ def read_jiras(paths) -> pd.DataFrame:
         df_chunk = pd.DataFrame()
         # TODO: Check what data would be useful for model (priority, labels)
         df_chunk['key'] = df_read['Issue key']
+        if 'Component/s' not in df_read:
+            df_read['Component/s'] = ''
+        df_chunk['component'] = df_read['Component/s']
+        if 'Project key' not in df_read:
+            df_read['Project key'] = ''
         df_chunk['project_id'] = df_read['Project key']
+        df_chunk['reporter'] = df_read['Reporter']
+        if 'Labels' not in df_read:
+            df_read['Labels'] = ''
+        if 'Description' not in df_read:
+            df_read['Description'] = ''
+        if 'Σ Time Spent' not in df_read:
+            df_read['Σ Time Spent'] = 0
+        if 'Σ Original Estimate' not in df_read:
+            df_read['Σ Original Estimate'] = 0
+        df_chunk['label'] = df_read['Labels']
         df_chunk['priority'] = df_read['Priority'].apply(lambda p: priorities_names[p])
         df_chunk['time'] = df_read['Σ Time Spent'].values / 3600
         df_chunk['estimate'] = df_read['Σ Original Estimate'].values / 3600
         df_chunk['text'] = (df_read['Summary'] + '\n' + df_read['Description']).values
+        # Project key
+
         df = df.append(df_chunk, ignore_index=True)
 
     df['text'] = df['text'].apply(preprocess_text)
@@ -100,11 +110,7 @@ def read_jiras(paths) -> pd.DataFrame:
     return commons.shuffle(mult_df)
 
 
-df_gas = read_jiras(gas_sources)
-df_non_gas = read_jiras(non_gas_soures)
-
-df_all = df_gas.append(df_non_gas, ignore_index=True)
-df_all = commons.shuffle(df_all)
+df_all = read_jiras(sources)
 
 size = df_all.shape[0]
 print('Dropping duplicates')
